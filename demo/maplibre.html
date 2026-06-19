@@ -1,0 +1,657 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MapImageOverlay - Production MapLibre Demo</title>
+
+    <script src="https://unpkg.com/maplibre-gl@4.0.0/dist/maplibre-gl.js"></script>
+    <link
+      href="https://unpkg.com/maplibre-gl@4.0.0/dist/maplibre-gl.css"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: #000;
+        color: #fff;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+      }
+      #map {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+      }
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #3f3f46;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #52525b;
+      }
+      input[type="range"] {
+        accent-color: #ffffff;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+
+    <div
+      id="viewer-panel"
+      class="absolute bottom-4 left-4 w-72 z-20 shadow-2xl bg-zinc-950/95 backdrop-blur rounded-xl border border-zinc-800 p-4"
+    >
+      <h3 class="font-bold text-lg mb-4">Saved Overlays</h3>
+      <div class="space-y-2">
+        <button
+          id="btn-add-mode"
+          class="w-full bg-zinc-100 text-zinc-900 hover:bg-zinc-200 py-2 rounded-md text-sm font-medium transition-colors"
+        >
+          Click Map to Add Image
+        </button>
+        <button
+          id="btn-quick-add"
+          class="w-full bg-zinc-800 text-zinc-100 hover:bg-zinc-700 py-2 rounded-md text-sm font-medium transition-colors"
+        >
+          Quick Add at Center
+        </button>
+
+        <div
+          id="hover-info"
+          class="hidden mt-4 p-3 bg-zinc-900 border border-zinc-700 rounded-md"
+        >
+          <h4 id="hover-title" class="font-bold text-sm text-zinc-100"></h4>
+          <p id="hover-desc" class="text-xs text-zinc-400 mt-1"></p>
+          <p class="text-[10px] text-zinc-500 mt-2 uppercase">
+            Click image on map to edit
+          </p>
+        </div>
+        <div id="overlay-list" class="mt-4 flex flex-col gap-2"></div>
+      </div>
+    </div>
+
+    <div
+      id="editor-panel"
+      class="absolute top-4 right-4 w-[380px] z-20 shadow-2xl bg-zinc-950/95 backdrop-blur rounded-xl border border-zinc-800 hidden flex-col"
+    >
+      <div
+        class="flex justify-between items-center p-4 border-b border-zinc-800"
+      >
+        <h3 class="font-bold">Image Settings</h3>
+        <div class="flex gap-1">
+          <button
+            id="btn-back"
+            class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 rounded text-xs hidden"
+          >
+            Back
+          </button>
+          <button
+            id="btn-front"
+            class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 rounded text-xs hidden"
+          >
+            Front
+          </button>
+          <button
+            id="btn-delete"
+            class="px-2 py-1 bg-red-900/50 text-red-400 hover:bg-red-900/80 rounded text-xs hidden"
+          >
+            Del
+          </button>
+          <button
+            id="btn-close"
+            class="px-2 py-1 hover:bg-zinc-800 rounded text-xs"
+          >
+            X
+          </button>
+        </div>
+      </div>
+
+      <div class="p-4 space-y-5 overflow-y-auto max-h-[80vh]">
+        <div class="space-y-2">
+          <input
+            type="text"
+            id="inp-title"
+            placeholder="Image Title"
+            class="w-full bg-zinc-900 border border-zinc-700 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-zinc-500"
+          />
+          <input
+            type="text"
+            id="inp-desc"
+            placeholder="Description (Optional)"
+            class="w-full bg-zinc-900 border border-zinc-700 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-zinc-500"
+          />
+        </div>
+
+        <div class="space-y-1">
+          <label class="text-xs text-zinc-400 font-medium flex justify-between"
+            >Opacity <span id="val-opacity">80%</span></label
+          >
+          <input
+            type="range"
+            id="inp-opacity"
+            min="0"
+            max="1"
+            step="0.01"
+            class="w-full"
+          />
+        </div>
+
+        <div class="space-y-1">
+          <label class="text-xs text-zinc-400 font-medium flex justify-between"
+            >Scale <span id="val-scale">100%</span></label
+          >
+          <input
+            type="range"
+            id="inp-scale"
+            min="10"
+            max="190"
+            step="1"
+            class="w-full"
+          />
+        </div>
+
+        <div class="space-y-1">
+          <label class="text-xs text-zinc-400 font-medium flex justify-between"
+            >Rotation <span id="val-rotation">0°</span></label
+          >
+          <input
+            type="range"
+            id="inp-rotation"
+            min="-360"
+            max="360"
+            step="1"
+            class="w-full"
+          />
+        </div>
+
+        <hr class="border-zinc-800" />
+        <h4 class="font-bold text-xs text-zinc-400 mb-2">
+          Coordinates (Lng, Lat)
+        </h4>
+        <div id="coords-container" class="space-y-2"></div>
+
+        <button
+          id="btn-save"
+          class="w-full bg-zinc-100 text-zinc-900 hover:bg-zinc-200 py-2 rounded-md font-medium transition-colors mt-4"
+        >
+          Save Overlay
+        </button>
+      </div>
+    </div>
+
+    <script type="module">
+      import { ImageOverlayController } from "../src/core/index.ts";
+
+      const map = new maplibregl.Map({
+        container: "map",
+        style:
+          "https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json",
+        center: [-75.97, 42.18],
+        zoom: 4,
+      });
+
+      // --- Geometry Utils ---
+      const cloneCoords = (coords) => coords.map((c) => [...c]);
+
+      const lngLatToMercator = (lng, lat) => {
+        const x = lng / 360 + 0.5;
+        const sinLat = Math.sin(lat * (Math.PI / 180));
+        const y =
+          0.5 - (0.25 * Math.log((1 + sinLat) / (1 - sinLat))) / Math.PI;
+        return { x, y };
+      };
+      const mercatorToLngLat = (x, y) => {
+        const lng = (x - 0.5) * 360;
+        const n = Math.PI - 2 * Math.PI * y;
+        const lat =
+          (180 / Math.PI) * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
+        return [lng, lat];
+      };
+      const calculateCentroid = (corners) => {
+        let sumX = 0,
+          sumY = 0;
+        corners.forEach((c) => {
+          const m = lngLatToMercator(c[0], c[1]);
+          sumX += m.x;
+          sumY += m.y;
+        });
+        return mercatorToLngLat(sumX / 4, sumY / 4);
+      };
+      const scaleCorners = (corners, centroid, scale) => {
+        const centerM = lngLatToMercator(centroid[0], centroid[1]);
+        return corners.map((c) => {
+          const m = lngLatToMercator(c[0], c[1]);
+          return mercatorToLngLat(
+            centerM.x + (m.x - centerM.x) * scale,
+            centerM.y + (m.y - centerM.y) * scale,
+          );
+        });
+      };
+      const rotateExistingCorners = (corners, centroid, angleDeg) => {
+        const centerM = lngLatToMercator(centroid[0], centroid[1]);
+        const rad = angleDeg * (Math.PI / 180);
+        const cos = Math.cos(rad),
+          sin = Math.sin(rad);
+        return corners.map((c) => {
+          const m = lngLatToMercator(c[0], c[1]);
+          const dx = m.x - centerM.x,
+            dy = m.y - centerM.y;
+          return mercatorToLngLat(
+            centerM.x + (dx * cos - dy * sin),
+            centerM.y + (dx * sin + dy * cos),
+          );
+        });
+      };
+
+      // --- State ---
+      let controller = null;
+      let state = {
+        overlays: [],
+        isAddMode: false,
+        hoveredId: null,
+        activeEdit: null,
+      };
+      const TEST_IMAGE_URL =
+        "https://docs.mapbox.com/mapbox-gl-js/assets/radar.gif";
+
+      // --- UI Elements ---
+      const els = {
+        viewerPanel: document.getElementById("viewer-panel"),
+        editorPanel: document.getElementById("editor-panel"),
+        btnAddMode: document.getElementById("btn-add-mode"),
+        overlayList: document.getElementById("overlay-list"),
+        hoverInfo: document.getElementById("hover-info"),
+        hoverTitle: document.getElementById("hover-title"),
+        hoverDesc: document.getElementById("hover-desc"),
+
+        inpTitle: document.getElementById("inp-title"),
+        inpDesc: document.getElementById("inp-desc"),
+        inpOpacity: document.getElementById("inp-opacity"),
+        valOpacity: document.getElementById("val-opacity"),
+        inpScale: document.getElementById("inp-scale"),
+        valScale: document.getElementById("val-scale"),
+        inpRotation: document.getElementById("inp-rotation"),
+        valRotation: document.getElementById("val-rotation"),
+        coordsContainer: document.getElementById("coords-container"),
+
+        btnSave: document.getElementById("btn-save"),
+        btnDelete: document.getElementById("btn-delete"),
+        btnBack: document.getElementById("btn-back"),
+        btnFront: document.getElementById("btn-front"),
+      };
+
+      // --- Core Engine Controllers ---
+      function syncViewerState() {
+        if (!controller) return;
+        controller.syncViewer(state.overlays, state.activeEdit?.id || null);
+      }
+
+      function updateEditorLive() {
+        if (!controller || !state.activeEdit) return;
+        controller.syncEditor(
+          state.activeEdit.corners,
+          state.activeEdit.url,
+          state.activeEdit.opacity,
+          state.activeEdit.id || null,
+        );
+
+        if (state.activeEdit.id) {
+          try {
+            const srcId = `viewer-src-${state.activeEdit.id}`;
+            const layerId = `viewer-layer-${state.activeEdit.id}`;
+            if (map.getSource(srcId))
+              map.getSource(srcId).setCoordinates(state.activeEdit.corners);
+            if (map.getLayer(layerId))
+              map.setPaintProperty(
+                layerId,
+                "raster-opacity",
+                state.activeEdit.opacity,
+              );
+          } catch (e) {}
+        }
+      }
+
+      // --- View Renderers ---
+      function renderUILayout() {
+        if (state.activeEdit) {
+          els.editorPanel.classList.remove("hidden");
+          els.editorPanel.classList.add("flex");
+          els.viewerPanel.classList.add("hidden");
+
+          const isNew = !state.activeEdit.id;
+          els.btnDelete.style.display = isNew ? "none" : "block";
+          els.btnBack.style.display = isNew ? "none" : "block";
+          els.btnFront.style.display = isNew ? "none" : "block";
+
+          els.inpTitle.value = state.activeEdit.title;
+          els.inpDesc.value = state.activeEdit.description;
+          els.inpOpacity.value = state.activeEdit.opacity;
+          els.inpScale.value = state.activeEdit.scale;
+          els.inpRotation.value = state.activeEdit.rotation;
+
+          els.coordsContainer.innerHTML = state.activeEdit.corners
+            .map(
+              (c, i) => `
+            <div class="flex gap-2">
+              <input type="number" id="c-${i}-0" value="${c[0].toFixed(5)}" class="w-1/2 bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-xs font-mono text-zinc-300 focus:outline-none" />
+              <input type="number" id="c-${i}-1" value="${c[1].toFixed(5)}" class="w-1/2 bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-xs font-mono text-zinc-300 focus:outline-none" />
+            </div>
+          `,
+            )
+            .join("");
+
+          [0, 1, 2, 3].forEach((i) => {
+            document
+              .getElementById(`c-${i}-0`)
+              .addEventListener("input", (e) =>
+                handleManualCoord(i, 0, e.target.value),
+              );
+            document
+              .getElementById(`c-${i}-1`)
+              .addEventListener("input", (e) =>
+                handleManualCoord(i, 1, e.target.value),
+              );
+          });
+        } else {
+          els.editorPanel.classList.add("hidden");
+          els.editorPanel.classList.remove("flex");
+          els.viewerPanel.classList.remove("hidden");
+
+          els.btnAddMode.innerText = state.isAddMode
+            ? "Cancel Add Mode"
+            : "Click Map to Add Image";
+          els.btnAddMode.className = state.isAddMode
+            ? "w-full bg-red-900/50 text-red-400 py-2 rounded-md text-sm font-medium"
+            : "w-full bg-zinc-100 text-zinc-900 py-2 rounded-md text-sm font-medium";
+
+          if (state.hoveredId) {
+            const h = state.overlays.find((o) => o.id === state.hoveredId);
+            els.hoverInfo.classList.remove("hidden");
+            els.hoverTitle.innerText = h?.title || "Untitled";
+            els.hoverDesc.innerText = h?.description || "";
+          } else {
+            els.hoverInfo.classList.add("hidden");
+          }
+
+          els.overlayList.innerHTML =
+            state.overlays.length === 0
+              ? '<p class="text-sm text-zinc-500">None yet.</p>'
+              : state.overlays
+                  .map(
+                    (o) => `
+            <button onclick="window.editOverlay('${o.id}')" class="w-full text-left bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 px-3 py-2 rounded text-xs font-medium text-zinc-300">Edit: ${o.title}</button>
+          `,
+                  )
+                  .join("");
+        }
+        updateLiveText();
+      }
+
+      function updateLiveText() {
+        if (!state.activeEdit) return;
+        els.valOpacity.innerText =
+          Math.round(state.activeEdit.opacity * 100) + "%";
+        els.valScale.innerText = state.activeEdit.scale + "%";
+        els.valRotation.innerText = state.activeEdit.rotation + "°";
+
+        [0, 1, 2, 3].forEach((i) => {
+          const x = document.getElementById(`c-${i}-0`),
+            y = document.getElementById(`c-${i}-1`);
+          if (x && document.activeElement !== x)
+            x.value = state.activeEdit.corners[i][0].toFixed(5);
+          if (y && document.activeElement !== y)
+            y.value = state.activeEdit.corners[i][1].toFixed(5);
+        });
+
+        els.btnSave.innerText = state.activeEdit.isDirty
+          ? "Save Overlay"
+          : "Saved!";
+        els.btnSave.disabled =
+          !state.activeEdit.isDirty || !state.activeEdit.title.trim();
+        els.btnSave.className = els.btnSave.disabled
+          ? "w-full bg-zinc-800 text-zinc-500 py-2 rounded-md font-medium mt-4"
+          : "w-full bg-zinc-100 text-zinc-900 hover:bg-zinc-200 py-2 rounded-md font-medium mt-4";
+      }
+
+      // --- Actions ---
+      function handleManualCoord(idx, axis, val) {
+        const v = parseFloat(val);
+        if (isNaN(v)) return;
+        state.activeEdit.corners[idx][axis] = v;
+        state.activeEdit.baseCorners = cloneCoords(state.activeEdit.corners);
+        state.activeEdit.isDirty = true;
+        updateEditorLive();
+        updateLiveText();
+      }
+
+      function saveOverlay() {
+        if (!state.activeEdit || !state.activeEdit.title.trim()) return;
+        const payload = {
+          id: state.activeEdit.id || Math.random().toString(36).substring(7),
+          type: "image",
+          title: state.activeEdit.title,
+          description: state.activeEdit.description,
+          coordinates: cloneCoords(state.activeEdit.corners),
+          imageUrl: state.activeEdit.url,
+          opacity: state.activeEdit.opacity,
+        };
+        const idx = state.overlays.findIndex((o) => o.id === payload.id);
+        if (idx >= 0) state.overlays[idx] = payload;
+        else state.overlays.push(payload);
+
+        state.activeEdit.id = payload.id;
+        state.activeEdit.isDirty = false;
+        syncViewerState();
+        updateEditorLive();
+        updateLiveText();
+      }
+
+      function closeEditor() {
+        state.activeEdit = null;
+        state.isAddMode = false;
+        if (controller) {
+          controller.setAddMode(false);
+          controller.syncEditor(null, null, 1, null);
+        }
+        syncViewerState();
+        renderUILayout();
+      }
+
+      window.editOverlay = (id) => {
+        const target = state.overlays.find((o) => o.id === id);
+        if (!target) return;
+        state.isAddMode = false;
+        if (controller) controller.setAddMode(false);
+        state.activeEdit = {
+          id: target.id,
+          url: target.imageUrl,
+          title: target.title,
+          description: target.description || "",
+          opacity: target.opacity,
+          scale: 100,
+          rotation: 0,
+          corners: cloneCoords(target.coordinates),
+          baseCorners: cloneCoords(target.coordinates),
+          isDirty: false,
+        };
+        syncViewerState();
+        updateEditorLive();
+        renderUILayout();
+      };
+
+      function mountNewImage(lngLat) {
+        const px = map.project(lngLat),
+          hw = 100,
+          hh = 100;
+        const corners = [
+          map.unproject({ x: px.x - hw, y: px.y - hh }),
+          map.unproject({ x: px.x + hw, y: px.y - hh }),
+          map.unproject({ x: px.x + hw, y: px.y + hh }),
+          map.unproject({ x: px.x - hw, y: px.y + hh }),
+        ].map((c) => [c.lng, c.lat]);
+
+        state.isAddMode = false;
+        if (controller) controller.setAddMode(false);
+        state.activeEdit = {
+          id: null,
+          url: TEST_IMAGE_URL,
+          title: "New Image",
+          description: "",
+          opacity: 0.8,
+          scale: 100,
+          rotation: 0,
+          corners: cloneCoords(corners),
+          baseCorners: cloneCoords(corners),
+          isDirty: true,
+        };
+        syncViewerState();
+        updateEditorLive();
+        renderUILayout();
+      }
+
+      // --- Map & Event Listeners ---
+      map.on("load", () => {
+        controller = new ImageOverlayController(map, "vanilla-ml");
+
+        controller.on("change", (e) => {
+          if (!state.activeEdit) return;
+          state.activeEdit.corners = cloneCoords(e.corners);
+          state.activeEdit.baseCorners = cloneCoords(e.corners);
+          state.activeEdit.scale = 100;
+          state.activeEdit.rotation = 0;
+          state.activeEdit.isDirty = true;
+
+          els.inpScale.value = 100;
+          els.inpRotation.value = 0;
+          updateLiveText();
+        });
+
+        controller.on("editOverlay", window.editOverlay);
+        controller.on("mapClickForAdd", mountNewImage);
+        controller.on("hoverOverlay", (id) => {
+          state.hoveredId = id;
+          renderUILayout();
+        });
+
+        controller.on("clickOutside", () => {
+          if (state.activeEdit) {
+            if (state.activeEdit.isDirty && state.activeEdit.title.trim())
+              saveOverlay();
+            closeEditor();
+          }
+        });
+
+        syncViewerState();
+        renderUILayout();
+      });
+
+      // UI Controls
+      els.btnAddMode.addEventListener("click", () => {
+        state.isAddMode = !state.isAddMode;
+        if (controller) controller.setAddMode(state.isAddMode);
+        renderUILayout();
+      });
+      document
+        .getElementById("btn-quick-add")
+        .addEventListener("click", () => mountNewImage([-75.97, 42.18]));
+
+      els.inpTitle.addEventListener("input", (e) => {
+        state.activeEdit.title = e.target.value;
+        state.activeEdit.isDirty = true;
+        updateLiveText();
+      });
+      els.inpDesc.addEventListener("input", (e) => {
+        state.activeEdit.description = e.target.value;
+        state.activeEdit.isDirty = true;
+        updateLiveText();
+      });
+
+      els.inpOpacity.addEventListener("input", (e) => {
+        state.activeEdit.opacity = parseFloat(e.target.value);
+        state.activeEdit.isDirty = true;
+        updateEditorLive();
+        updateLiveText();
+      });
+
+      // Infinite Scale
+      els.inpScale.addEventListener("input", (e) => {
+        const val = parseFloat(e.target.value);
+        state.activeEdit.scale = val;
+        const centroid = calculateCentroid(state.activeEdit.baseCorners);
+        state.activeEdit.corners = scaleCorners(
+          state.activeEdit.baseCorners,
+          centroid,
+          val / 100,
+        );
+        state.activeEdit.isDirty = true;
+        updateEditorLive();
+        updateLiveText();
+      });
+      els.inpScale.addEventListener("change", () => {
+        state.activeEdit.baseCorners = cloneCoords(state.activeEdit.corners);
+        state.activeEdit.scale = 100;
+        els.inpScale.value = 100; // Force DOM reset
+        updateLiveText();
+      });
+
+      els.inpRotation.addEventListener("input", (e) => {
+        const val = parseFloat(e.target.value),
+          delta = val - state.activeEdit.rotation;
+        state.activeEdit.rotation = val;
+        const centroid = calculateCentroid(state.activeEdit.corners);
+        state.activeEdit.corners = rotateExistingCorners(
+          state.activeEdit.corners,
+          centroid,
+          delta,
+        );
+        state.activeEdit.baseCorners = rotateExistingCorners(
+          state.activeEdit.baseCorners,
+          centroid,
+          delta,
+        );
+        state.activeEdit.isDirty = true;
+        updateEditorLive();
+        updateLiveText();
+      });
+
+      document
+        .getElementById("btn-close")
+        .addEventListener("click", closeEditor);
+      els.btnSave.addEventListener("click", saveOverlay);
+      els.btnDelete.addEventListener("click", () => {
+        state.overlays = state.overlays.filter(
+          (o) => o.id !== state.activeEdit.id,
+        );
+        closeEditor();
+      });
+
+      const reorder = (dir) => {
+        const idx = state.overlays.findIndex(
+          (o) => o.id === state.activeEdit.id,
+        );
+        if (idx === -1) return;
+        const arr = [...state.overlays];
+        arr[idx].coordinates = cloneCoords(state.activeEdit.corners);
+        const [item] = arr.splice(idx, 1);
+        dir === "front" ? arr.push(item) : arr.unshift(item);
+        state.overlays = arr;
+        syncViewerState();
+        renderUILayout();
+      };
+      els.btnBack.addEventListener("click", () => reorder("back"));
+      els.btnFront.addEventListener("click", () => reorder("front"));
+    </script>
+  </body>
+</html>
