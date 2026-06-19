@@ -3,6 +3,25 @@
   "version": "0.1.0-beta.0",
   "description": "A framework-agnostic georeferencing and image overlay editor for Mapbox GL and MapLibre GL.",
   "type": "module",
+  "author": "Danial Abdoli <hello@danialabdoli.dev>",
+  "license": "MIT",
+  "homepage": "https://github.com/CatCodeDanix/map-image-overlay#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CatCodeDanix/map-image-overlay.git"
+  },
+  "bugs": {
+    "url": "https://github.com/CatCodeDanix/map-image-overlay/issues"
+  },
+  "keywords": [
+    "mapbox",
+    "maplibre",
+    "georeferencing",
+    "image-overlay",
+    "react",
+    "gis",
+    "webgl"
+  ],
   "files": [
     "dist"
   ],
