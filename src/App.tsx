@@ -12,6 +12,25 @@ import { Slider } from "@/components/ui/slider";
 const MAPBOX_TOKEN = "YOUR_MAPBOX_ACCESS_TOKEN";
 const TEST_IMAGE_URL = "https://docs.mapbox.com/mapbox-gl-js/assets/radar.gif";
 
+const OSM_STYLE = {
+  version: 8,
+  sources: {
+    osm: {
+      type: "raster",
+      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+      tileSize: 256,
+      attribution: "&copy; OpenStreetMap Contributors",
+    },
+  },
+  layers: [
+    {
+      id: "osm-layer",
+      type: "raster",
+      source: "osm",
+    },
+  ],
+};
+
 function MapWorkspace({ engine }: { engine: "mapbox" | "maplibre" }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [mapInstance, setMapInstance] = useState<GenericMap | null>(null);
@@ -24,16 +43,14 @@ function MapWorkspace({ engine }: { engine: "mapbox" | "maplibre" }) {
       mapboxgl.accessToken = MAPBOX_TOKEN;
       map = new mapboxgl.Map({
         container: containerRef.current,
-        style:
-          "https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json",
+        style: OSM_STYLE as any,
         center: [-75.97, 42.18],
         zoom: 4,
       });
     } else {
       map = new maplibregl.Map({
         container: containerRef.current,
-        style:
-          "https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json",
+        style: OSM_STYLE as any,
         center: [-75.97, 42.18],
         zoom: 4,
       });
