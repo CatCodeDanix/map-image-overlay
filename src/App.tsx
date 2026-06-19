@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 
 const MAPBOX_TOKEN = "YOUR_MAPBOX_ACCESS_TOKEN";
-const TEST_IMAGE_URL = "https://docs.mapbox.com/mapbox-gl-js/assets/radar.gif";
+const TEST_IMAGE_URL = "/rafar.gif";
 
 const OSM_STYLE = {
   version: 8,
